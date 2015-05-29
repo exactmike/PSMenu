@@ -5,7 +5,11 @@ There are some good options out there, especially using $host.UI.PromptForChoice
 PromptForChoice, however, only provides part of what is required for a menu system.  PSMenu is envisioned to provide the following features:
 
 * Flexible Presentation of User Choices (the Show-Menu function currently provides one option for display of choices but can be expanded)
+<<<<<<< HEAD
 * Menu Hierachies and/or Nested Menus with dynamic inclusion of Child menus in the choices list, if desired.
+=======
+* Menu Hierachies and/or Nested Menus with dynamic inclusion of Child menues in the choices list, if desired.
+>>>>>>> 4d2db24f02f8a34cfb5df7bc8be16043d2ae0db5
 * Dynamically generated menus from any array of objects
 * Separation of menu definition from menu display and user choice execution.  Menus are defined as a HashTable object.
 
@@ -50,9 +54,13 @@ md test
     -a---        2015-05-29  11:36 AM          0 document3.txt     
 
 $menudefinition = New-DynamicMenuDefinition -Title "Select a file to delete" -Choices (ls | select -ExpandProperty fullname) -command "Remove-Item" -ChoiceAsCommandParameter
+<<<<<<< HEAD
 
 $menudefinition
 
+=======
+$menudefinition
+>>>>>>> 4d2db24f02f8a34cfb5df7bc8be16043d2ae0db5
     GUID           : e72f2d4e-7eeb-4512-abee-fad950d94ca1
     Title          : Select a file to delete
     Initialization : 
