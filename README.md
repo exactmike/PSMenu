@@ -1,12 +1,11 @@
-﻿# PSMenu
+# PSMenu
 
-PSMenu started out from my attempts to find a good way to present options to administrators consuming my PowerShell modules and functions.  
+PSMenu started out from my attempts to find a good way to present a menu of options to administrators consuming my PowerShell modules and functions.  
 There are some good options out there, especially using $host.UI.PromptForChoice(), which I do use in a variety of situations. 
 PromptForChoice, however, only provides part of what is required for a menu system.  PSMenu is envisioned to provide the following features:
 
-* Flexible Presentation of User Choices (the Show-Menu function currently provides one option for display of choices but can be expanded)
+* Flexible Presentation of User Choices (the Show-Menu function currently provides one option for display of choices but can be expanded.  I plan to add PromptForChoice as an option in one of the next revisions.)
 * Menu Hierachies and/or Nested Menus with dynamic inclusion of Child menus in the choices list, if desired.
-* Menu Hierachies and/or Nested Menus with dynamic inclusion of Child menues in the choices list, if desired.
 * Dynamically generated menus from any array of objects
 * Separation of menu definition from menu display and user choice execution.  Menus are defined as a HashTable object.
 
@@ -17,9 +16,10 @@ PromptForChoice, however, only provides part of what is required for a menu syst
     - Initialization: Any arbitrary scriptblock to be run when the menu is invoked, stored as a string to be convereted to scriptblock dynamically at menu invocation.  
     - Choices: An array of objects with properties "choice" and "command".  Choice is a string which describes the option to the user.  Command is an arbitrary scriptblock to be run when the menu choice is selected.  Stored as a string to be converted to a scriptblock dynamically at menu invocation. 
     - ParentGUID: used for determining menu location in a hierarchy and affects display / navigation options presented to the user.  
+    - DefaultDisplayMode (Future option, not currently implemented, to select a text based template, PromptForChoice, or other yet to be determined options)
 Alternatively, try using New-DynamicMenuDefinition, like this: $menudefinition = New-DynamicMenuDefinition -Title "Show properties of the selected file" -Choices (ls | select-object -expandproperty fullname) -command "Get-Item" -ChoiceAsCommandParameter 
 2. Run Invoke-Menu -menudefinition $menudefinition
-    - Invoke-menu calls function New-MenuScriptblock to dynamically create a scriptblock which is then executed.  The scriptblock created by New-MenuScriptblock includes the Show-Menu function which handles the display and input of user choices.
+    - Invoke-menu calls function New-MenuScriptblock to dynamically create a scriptblock which is then executed.  The scriptblock created by New-MenuScriptblock includes the Show-Menu function which handles the display and input of user choices. User choice is returned to the scriptblock and the appropriate arbitrary code in the scriptblock corresponding to the user choice is executed. 
     
 ## Development Plans
 
@@ -27,6 +27,10 @@ Alternatively, try using New-DynamicMenuDefinition, like this: $menudefinition =
 2. Improve the Menu Hierarchy logic and functions
 3. Make screen clearing optional via parameter
 4. Modify New-DynamicMenuDefinition to make command pipeline possible (place choice token/identifier arbitrarily within the command string)
+
+## Note concerning dynamic scriptblocks
+* To be successful, you will need to be aware of the rules variable scoping in relation to script blocks created by these functions.
+* When creating dynamic scriptblocks from strings you will need to control when variable expansion occurs in strings to achieve your intended effect.  Various combinations of single(') and double(") quotes and the backtick character (`) can usually help you achieve your goal.  
 
 ## Example
 cd c:\
