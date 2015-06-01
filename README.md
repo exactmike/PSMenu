@@ -7,14 +7,14 @@ PromptForChoice, however, only provides part of what is required for a menu syst
 * Flexible Presentation of User Choices (the Show-Menu function currently provides one option for display of choices but can be expanded.  I plan to add PromptForChoice as an option in one of the next revisions.)
 * Menu Hierachies and/or Nested Menus with dynamic inclusion of Child menus in the choices list, if desired.
 * Dynamically generated menus from any array of objects
-* Separation of menu definition from menu display and user choice execution.  Menus are defined as a HashTable object.
+* Separation of menu definition from menu display and user choice execution.  Menus are defined as a pscustomobject.
 
 ## How it Works
-1. Create a menu definition object (a hashtable), with the following key value pairs:
+1. Create a menu definition object (a pscustomobject), with the following properties:
     - GUID: GUID or other Unique Identifier
     - Title: Descriptive String which will be displayed to the user as the Menu Title when the menu is invoked.
-    - Initialization: Any arbitrary scriptblock to be run when the menu is invoked, stored as a string to be convereted to scriptblock dynamically at menu invocation.  
-    - Choices: An array of objects with properties "choice" and "command".  Choice is a string which describes the option to the user.  Command is an arbitrary scriptblock to be run when the menu choice is selected.  Stored as a string to be converted to a scriptblock dynamically at menu invocation. 
+    - Initialization: Any arbitrary string to be converted to a scriptblock to be run when the menu is invoked, stored as a string to be convereted to scriptblock dynamically at menu invocation.  
+    - Choices: An array of objects with properties "choice" and "command".  Choice is a string which describes the option to the user.  Command is an arbitrary string to be converted to scriptblock and run when the menu choice is selected.  Stored as a string to be converted to a scriptblock dynamically at menu invocation. 
     - ParentGUID: used for determining menu location in a hierarchy and affects display / navigation options presented to the user.  
     - DefaultDisplayMode (Future option, not currently implemented, to select a text based template, PromptForChoice, or other yet to be determined options)
 Alternatively, try using New-DynamicMenuDefinition, like this: $menudefinition = New-DynamicMenuDefinition -Title "Show properties of the selected file" -Choices (ls | select-object -expandproperty fullname) -command "Get-Item" -ChoiceAsCommandParameter 

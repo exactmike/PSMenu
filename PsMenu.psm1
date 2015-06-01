@@ -1,46 +1,86 @@
 ﻿##########################################################################################################
 #Menu Functions
 ##########################################################################################################
+<#
+    Script Module: PsMenu.psm1
+    Author: Mike Campbell
+    Version: 1.0
+    Inspiration: @(
+    http://stackoverflow.com/questions/24413295/powershell-console-menu-options-need-to-add-line-breaks
+    https://gallery.technet.microsoft.com/scriptcenter/Powershell-Menu-a01643e2 #found this one only after I had developed PSMenu and begun deploying it.  
+    http://www.zerrouki.com/powershell-menus-host-ui-promptforchoice-defined-or-dynamic/
+    )
+#>
+
 function Get-MenuHierarchy {
-param(
-$GUID
-)
-$menuHierarchy = $Global:MenuDefinitions.$GUID.Title
-$ParentGUID = $Global:MenuDefinitions.$GUID.ParentGUID
-while ($ParentGUID){
-    $menuHierarchy = $($Global:MenuDefinitions.$parentGUID.Title) + ' -> '  + $menuHierarchy
-    $ParentGUID = $Global:MenuDefinitions.$ParentGUID.ParentGUID    
-}#do
-Return $menuHierarchy
+    <#
+        .Synopsis
+        Builds and returns a Menu Hierarchy for a given menu from an Menu Definitions Hashtable Object
+        .DESCRIPTION
+        Builds and returns a Menu Hierarchy for a given menu from an Menu Definitions Hashtable Object
+        .EXAMPLE
+        Primarily for use by other functions in PSMenu, this is the syntax that might be used:
+        Get-MenuHierarchy -GUID $MenuDefinitions.'9e7ff8e1-afbb-418d-a31f-9c07bce3ab33'
+        .INPUTS
+        A Menu Definition Hashtable of Menu Definitions with Key being the menu GUID and value being teh menu Definitions
+        .OUTPUTS
+        String showing a representation of the menu hierarchy
+    #>
+    param(
+        $GUID
+        ,
+        $MenuDefinitions = $Global:MenuDefinitions
+    )
+    $menuHierarchy = $MenuDefinitions.$GUID.Title
+    $ParentGUID = $MenuDefinitions.$GUID.ParentGUID
+    while ($ParentGUID){
+        $menuHierarchy = $($MenuDefinitions.$parentGUID.Title) + ' -> '  + $menuHierarchy
+        $ParentGUID = $MenuDefinitions.$ParentGUID.ParentGUID    
+    }#do
+        $menuHierarchy
 }
 function Show-Menu {
-param(
-$menudefinition
-)
+    <#
+        .Synopsis
+        Displays the User options from a menu defintion and returns user choice to the scriptblock which calls Show-Menu.
+        .DESCRIPTION
+        Displays the User options from a menu defintion and returns user choice to the scriptblock which calls Show-Menu. 
+        Show-Menu is not usually called directly by a user, but instead becomes embedded in a scriptblock created by New-MenuScriptblock.
+        .EXAMPLE
+        Primarily for use by other functions in PSMenu, this is the syntax that might be used:
+        Show-menu -MenuDefinition $MenuDefinition
+        .INPUTS
+        A Menu Definition Object
+        .OUTPUTS
+        Read-Host with custom Prompt
+    #>
+    param(
+        $MenuDefinition
+    )
 
-$childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
-$displaychoices = @()
+    $childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
+    $displaychoices = @()
 
-$num = 0
-if ($menudefinition.Choices.Count -ge 1) {
-    foreach ($choice in $menudefinition.choices) {
-        $num++
-        $displaychoices += "$num $($choice.choice)"
-    }#foreach
-}#if
-if ($childmenus.count -ge 1) {
-    foreach ($menu in $(Get-ChildMenu -GUID $menudefinition.GUID)) {
-        $num++
-        $displaychoices += "$num $($menu.Title)"
-    }#foreach
-}#if
+    $num = 0
+    if ($menudefinition.Choices.Count -ge 1) {
+        foreach ($choice in $menudefinition.choices) {
+            $num++
+            $displaychoices += "$num $($choice.choice)"
+        }#foreach
+    }#if
+    if ($childmenus.count -ge 1) {
+        foreach ($menu in $(Get-ChildMenu -GUID $menudefinition.GUID)) {
+            $num++
+            $displaychoices += "$num $($menu.Title)"
+        }#foreach
+    }#if
 
-$displaychoicesstring = $displaychoices -join "`n`t"
-#set menu title and Navigation Hierarcy
-$menuTitle = $menudefinition.Title
-$menuHierarchy = Get-MenuHierarchy -GUID $menudefinition.GUID
-if ($menuHierarchy) {$menuprompt = "`nNavigation: $menuHierarchy"}
-$menuprompt += @"
+    $displaychoicesstring = $displaychoices -join "`n`t"
+    #set menu title and Navigation Hierarcy
+    $menuTitle = $menudefinition.Title
+    $menuHierarchy = Get-MenuHierarchy -GUID $menudefinition.GUID
+    if ($menuHierarchy) {$menuprompt = "`nNavigation: $menuHierarchy"}
+    $menuprompt += @"
 
 Current Menu: $menuTitle
 ======================================================================================================================
@@ -50,37 +90,51 @@ Current Menu: $menuTitle
 ======================================================================================================================
 
 "@
-if ($menudefinition.ParentGUID) {
-    $menuprompt = $menuprompt + "`nEnter your selection or 'Q' to return to parent menu`n:"
-}
-else {$menuprompt = $menuprompt + "`nEnter your selection or 'Q' to exit this menu`n:"}
+    if ($menudefinition.ParentGUID) {
+        $menuprompt = $menuprompt + "`nEnter your selection or 'Q' to return to parent menu`n:"
+    }#if
+    else {$menuprompt = $menuprompt + "`nEnter your selection or 'Q' to exit this menu`n:"}
 
-clear-host
-read-host -Prompt $menuprompt
+    clear-host
+    read-host -Prompt $menuprompt
 
-}
+}#function Show-Menu
 function New-MenuScriptBlock {
-param(
-$menudefinition
-)
-$num = 0
-$childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
-$switchchoices = @(
-    if ($menudefinition.choices.count -ge 1){
-        foreach ($choice in $menudefinition.choices) {
-            $num++
-            "$num {$($choice.command)}"
-        }#foreach
-    }#if
-    if ($childmenus.count -ge 1) {
-        foreach ($menu in $childmenus) {
-            $num++
-            "$num {$("Invoke-Menu -menuGUID $($menu.GUID)")}"
-        }#foreach
-    }#if
-)
-$switchchoicesstring = $switchchoices -join "`n`t`t"
-$commandstring = @"
+    <#
+        .Synopsis
+        Creates a scriptblock for execution by Invoke-Menu. 
+        .DESCRIPTION
+        Creates a scriptblock for execution by Invoke-Menu.  
+        The scriptblock includes a scriptblock for display and capture of user choices and the scriptblocks for execution based on user choice selection. 
+        .EXAMPLE
+        Primarily for use by other functions in PSMenu, this is the syntax that might be used:
+        New-MenuScriptBlock -MenuDefinition $MenuDefinition
+        .INPUTS
+        A Menu Definition Object
+        .OUTPUTS
+        A string, specifially a here-string, for conversion by Invoke-Menu to a scriptblock object.  
+    #>
+    param(
+        $MenuDefinition
+    )
+    $num = 0
+    $childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
+    $switchchoices = @(
+        if ($menudefinition.choices.count -ge 1){
+            foreach ($choice in $menudefinition.choices) {
+                $num++
+                "$num {$($choice.command)}"
+            }#foreach
+        }#if
+        if ($childmenus.count -ge 1) {
+            foreach ($menu in $childmenus) {
+                $num++
+                "$num {$("Invoke-Menu -menuGUID $($menu.GUID)")}"
+            }#foreach
+        }#if
+    )#switchchoices
+    $switchchoicesstring = $switchchoices -join "`n`t`t"
+    $commandstring = @"
 `$exit = `$false
 do {
     `$selection = Show-Menu -MenuDefinition `$menudefinition
@@ -97,89 +151,127 @@ until (`$exit)
 Clear-Host
 "@
 
-$commandstring
-}
+    $commandstring
+    
+}#Function New-MenuScriptBlock
 function Invoke-Menu {
-param(
-[parameter(ParameterSetName='Definition')]
-$menudefinition
-,
-[parameter(ParameterSetName='GUID')]
-$menuGUID
-)
-if ($PSCmdlet.ParameterSetName -eq 'GUID') {
-$menudefinition = $Global:MenuDefinitions.$menuGUID
-}
-if($menudefinition.Initialization) {
-    $initialize = [scriptblock]::Create($menudefinition.Initialization)
-    &$initialize
-}
-$scriptblock = [scriptblock]::Create($(New-MenuScriptBlock -menudefinition $menudefinition))
-&$scriptblock
-}
+    <#
+        .Synopsis
+        Invokes a scriptblock based on a MenuDefinition.  
+        .DESCRIPTION
+        Invokes a scriptblock based on a MenuDefinition.
+        Calls New-MenuDefinition to create the scriptblock based on the MenuDefintion.  
+        Executes the scriptblock (which has embedded in it the Show-Menu function for display and capture of user choices).
+        .EXAMPLE
+        Invoke-Menu -MenuDefinition $MenuDefinition
+        Invokes a pre-created MenuDefinition Object.
+        .EXAMPLE
+        Invoke-Menu -MenuGUID 9e7ff8e1-afbb-418d-a31f-9c07bce3ab33
+        Invokes a pre-created MenuDefinition Object which is stored in the Global:MenuDefinitions Hashtable
+        .INPUTS
+        A Menu Definition Object
+        .OUTPUTS
+        Invokes a scriptblock which is created based on the MenuDefinition Object
+    #>
+    param(
+        [parameter(ParameterSetName='Definition')]
+        $MenuDefinition
+        ,
+        [parameter(ParameterSetName='GUID')]
+        $MenuGUID
+    )
+    if ($PSCmdlet.ParameterSetName -eq 'GUID') {
+        $MenuDefinition = $Global:MenuDefinitions.$menuGUID
+    }#if
+    if($menudefinition.Initialization) {
+        $initialize = [scriptblock]::Create($menudefinition.Initialization)
+        &$initialize
+    }#if
+    $scriptblock = [scriptblock]::Create($(New-MenuScriptBlock -menudefinition $menudefinition))
+    &$scriptblock
+}#function Invoke-Menu
 function Add-GlobalMenuDefinition {
-param(
-$MenuDefinition
-)
-#create the Global Menu Definitions Hashtable if needed
-if (Test-Path variable:Global:MenuDefinitions) {}
-else {$Global:MenuDefinitions = @{}}
-#add the new menu definition to the hashtable
-$Global:MenuDefinitions.$($MenuDefinition.GUID)=$MenuDefinition
-if ($MenuDefinition.ParentGUID) {Update-MenuChildLookup}
+    param(
+        $MenuDefinition
+    )
+    #create the Global Menu Definitions Hashtable if needed
+    if (Test-Path variable:Global:MenuDefinitions) {}
+    else {$Global:MenuDefinitions = @{}}
+    #add the new menu definition to the hashtable
+    $Global:MenuDefinitions.$($MenuDefinition.GUID)=$MenuDefinition
+    if ($MenuDefinition.ParentGUID) {Update-MenuChildLookup}
 }
 function Update-MenuChildLookup {
     $Global:MenuChildLookup = @{}
     $global:MenuDefinitions.Values | Where-Object {$_.ParentGUID -ne $null} | foreach {$Global:MenuChildLookup.$($_.ParentGUID) += @($_.GUID)}
-}
+}#Function Add-GlobalMenuDefinition
 function Get-ChildMenu {
-param(
-$GUID
-)    
-$ChildMenuGUIDs = @($Global:MenuChildLookup.$GUID | Sort-Object)
-if ($ChildMenuGUIDs.count -ge 1) {
-    $childMenus = @()
-    foreach ($GUID in $ChildMenuGUIDs) {
-        $childmenu = @{
-            GUID = $GUID
-            Title = $Global:MenuDefinitions.$GUID.Title
-        }#childmenu
-        $childMenus += $childmenu
-    }
-    Return $childMenus
-}
+    param(
+        $GUID
+    )    
+    $ChildMenuGUIDs = @($Global:MenuChildLookup.$GUID | Sort-Object)
+    if ($ChildMenuGUIDs.count -ge 1) {
+        $childMenus = @()
+        foreach ($GUID in $ChildMenuGUIDs) {
+            $childmenu = @{
+                GUID = $GUID
+                Title = $Global:MenuDefinitions.$GUID.Title
+            }#childmenu
+            $childMenus += $childmenu
+        }#foreach
+        $childMenus
+    }#if
 }
 function New-DynamicMenuDefinition {
-param(
-[string]$Title
-,
-[string[]]$Choices
-,
-[string]$command
-,
-[string]$ParentMenu = $null
-,
-$ParentGUID
-,
-[switch]$ChoiceAsCommandParameter
-,
-[string]$Initialization
-)
-if ($parentGUID) {}
-else {$ParentGUID = $Global:MenuDefinitions | Where-Object Title -eq $ParentMenu | Select-Object -ExpandProperty GUID}
-$menudefinition = [pscustomobject]@{
-    GUID = [guid]::NewGuid().Guid
-    Title = $Title
-    Initialization = $Initialization
-    Choices = @(
-        foreach ($choice in $choices) {
-            switch ($ChoiceAsCommandParameter) {
-                $true {[pscustomobject]@{choice="$choice";command="$command $choice"}}
-                Default {[pscustomobject]@{choice="$choice";command="$command"}}
-            }#switch
-        }
+    <#
+        .Synopsis
+        Creates a MenuDefinition Object dynamically for an array of string objects.  
+        .DESCRIPTION
+        Creates a MenuDefinition Object dynamically for an array of string objects.  
+        .EXAMPLE
+        $menudefinition = New-DynamicMenuDefinition -Title "Show properties of the selected file" -Choices (ls | select-object -expandproperty fullname) -command "Get-Item" -ChoiceAsCommandParameter 
+        $menudefinition
+        GUID           : 23348d70-2a4d-49b2-b9f3-40e6c8999c6e
+        Title          : Show properties of the selected file
+        Initialization : 
+        Choices        : {@{choice=C:\test\document1.txt; command=Get-Item C:\test\document1.txt}, @{choice=C:\test\document3.txt; command=Get-Item C:\test\document3.txt}}
+        ParentGUID     : 
+        .INPUTS
+        An array of strings to define the choices displayed.  A command to run.
+        .OUTPUTS
+        A MenuDefinition Object
+    #>
+    param(
+        [string]$Title
+        ,
+        [string[]]$Choices
+        ,
+        [string]$command
+        ,
+        [string]$ParentMenu = $null
+        ,
+        $ParentGUID
+        ,
+        [switch]$ChoiceAsCommandParameter
+        ,
+        [string]$Initialization
     )
-    ParentGUID = $ParentGUID
-}
-Return $menudefinition
+    if ($parentGUID) {}
+    else {$ParentGUID = $Global:MenuDefinitions | Where-Object Title -eq $ParentMenu | Select-Object -ExpandProperty GUID}
+    
+    $menudefinition = [pscustomobject]@{
+        GUID = [guid]::NewGuid().Guid
+        Title = $Title
+        Initialization = $Initialization
+        Choices = @(
+            foreach ($choice in $choices) {
+                switch ($ChoiceAsCommandParameter) {
+                    $true {[pscustomobject]@{choice="$choice";command="$command $choice"}}
+                    Default {[pscustomobject]@{choice="$choice";command="$command"}}
+                }#switch
+            }
+        )
+        ParentGUID = $ParentGUID
+    }
+    $menudefinition
 }
