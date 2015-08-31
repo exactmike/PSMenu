@@ -4,7 +4,7 @@
 <#
     Script Module: PsMenu.psm1
     Author: Mike Campbell
-    Version: 1.0
+    Version: 1.1
     Inspiration: @(
     http://stackoverflow.com/questions/24413295/powershell-console-menu-options-need-to-add-line-breaks
     https://gallery.technet.microsoft.com/scriptcenter/Powershell-Menu-a01643e2 #found this one only after I had developed PSMenu and begun deploying it.  
@@ -60,7 +60,7 @@ function Show-Menu {
 
     $childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
     $displaychoices = @()
-
+    $width = $(if ($host.Name -like '*ISE*') {$host.ui.RawUI.BufferSize.Width} else {$host.UI.RawUI.WindowSize.Width}) - 1
     $num = 0
     if ($menudefinition.Choices.Count -ge 1) {
         foreach ($choice in $menudefinition.choices) {
@@ -83,11 +83,11 @@ function Show-Menu {
     $menuprompt += @"
 
 Current Menu: $menuTitle
-======================================================================================================================
+$("=" * $width)
 
 `t$displaychoicesstring
 
-======================================================================================================================
+$("=" * $width)
 
 "@
     if ($menudefinition.ParentGUID) {
