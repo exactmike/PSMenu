@@ -123,7 +123,7 @@ function New-MenuScriptBlock {
         if ($menudefinition.choices.count -ge 1){
             foreach ($choice in $menudefinition.choices) {
                 $num++
-                "$num {$($choice.command)}"
+                "$num {$($choice.command)$(if ($choice.Exit){"`nSet-Variable -name $($menudefinition.GUID)_Exit -Value `$true -Scope Global"})}"
             }#foreach
         }#if
         if ($childmenus.count -ge 1) {
@@ -135,19 +135,20 @@ function New-MenuScriptBlock {
     )#switchchoices
     $switchchoicesstring = $switchchoices -join "`n`t`t"
     $commandstring = @"
-`$exit = `$false
+`${Global:$($MenuDefinition.GUID)_exit} = `$false
 do {
     `$selection = Show-Menu -MenuDefinition `$menudefinition
     switch (`$Selection) {
         $($switchchoicesstring)
-        'Q'{`$exit = `$true}
+        'Q'{`${Global:$($MenuDefinition.GUID)_exit} = `$true}
         Default {
             Write-Host 'Invalid entry.  Please make another selection.'
         }
     }
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 1000
 }#do
-until (`$exit)
+until (`${Global:$($MenuDefinition.GUID)_exit})
+Remove-Variable -Name $("{$($MenuDefinition.GUID)_exit}") -Scope Global
 Clear-Host
 "@
 
