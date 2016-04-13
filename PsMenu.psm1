@@ -1,17 +1,63 @@
-﻿##########################################################################################################
-#Menu Functions
+﻿###############################################################################################
+#Module Variables and Variable Functions
+###############################################################################################
+function Get-PSMVariable
+{
+param
+(
+[string]$Name
+)
+    Get-Variable -Scope Script -Name $name 
+}
+function Get-PSMVariableValue
+{
+param
+(
+[string]$Name
+)
+    Get-Variable -Scope Script -Name $name -ValueOnly
+}
+function Set-PSMVariable
+{
+param
+(
+[string]$Name
+,
+$Value
+)
+    Set-Variable -Scope Script -Name $Name -Value $value  
+}
+function New-PSMVariable
+{
+param 
+(
+[string]$Name
+,
+$Value
+)
+    New-Variable -Scope Script -Name $name -Value $Value
+}
+function Remove-PSMVariable
+{
+param
+(
+[string]$Name
+)
+    Remove-Variable -Scope Script -Name $name
+}
+##########################################################################################################
+#Core PSMenu Functions
 ##########################################################################################################
 <#
     Script Module: PsMenu.psm1
     Author: Mike Campbell
-    Version: 1.1
+    Version: 1.3
     Inspiration: @(
     http://stackoverflow.com/questions/24413295/powershell-console-menu-options-need-to-add-line-breaks
     https://gallery.technet.microsoft.com/scriptcenter/Powershell-Menu-a01643e2 #found this one only after I had developed PSMenu and begun deploying it.  
     http://www.zerrouki.com/powershell-menus-host-ui-promptforchoice-defined-or-dynamic/
     )
 #>
-
 function Get-MenuHierarchy {
     <#
         .Synopsis
