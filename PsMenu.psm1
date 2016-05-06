@@ -75,7 +75,7 @@ function Get-MenuHierarchy {
     param(
         $GUID
         ,
-        $MenuDefinitions = $Global:MenuDefinitions
+        $MenuDefinitions = $Script:MenuDefinitions
     )
     $menuHierarchy = $MenuDefinitions.$GUID.Title
     $ParentGUID = $MenuDefinitions.$GUID.ParentGUID
@@ -169,7 +169,7 @@ function New-MenuScriptBlock {
         if ($menudefinition.choices.count -ge 1){
             foreach ($choice in $menudefinition.choices) {
                 $num++
-                "$num {$($choice.command)$(if ($choice.Exit){"`nSet-Variable -name $($menudefinition.GUID)_Exit -Value `$true -Scope Global"})}"
+                "$num {$($choice.command)$(if ($choice.Exit){"`nSet-Variable -name $($menudefinition.GUID)_Exit -Value `$true -Scope Script"})}"
             }#foreach
         }#if
         if ($childmenus.count -ge 1) {
@@ -181,12 +181,12 @@ function New-MenuScriptBlock {
     )#switchchoices
     $switchchoicesstring = $switchchoices -join "`n`t`t"
     $commandstring = @"
-`${Global:$($MenuDefinition.GUID)_exit} = `$false
+`${Script:$($MenuDefinition.GUID)_exit} = `$false
 do {
     `$selection = Show-Menu -MenuDefinition `$menudefinition
     switch (`$Selection) {
         $($switchchoicesstring)
-        'Q'{`${Global:$($MenuDefinition.GUID)_exit} = `$true}
+        'Q'{`${Script:$($MenuDefinition.GUID)_exit} = `$true}
         Default {
             Write-Host 'Invalid entry.  Please make another selection.'
         }
@@ -194,7 +194,7 @@ do {
     Start-Sleep -Milliseconds 1000
 }#do
 until (`${Global:$($MenuDefinition.GUID)_exit})
-Remove-Variable -Name $("{$($MenuDefinition.GUID)_exit}") -Scope Global
+Remove-Variable -Name $("{$($MenuDefinition.GUID)_exit}") -Scope Script
 Clear-Host
 "@
 
@@ -228,7 +228,7 @@ function Invoke-Menu {
         $MenuGUID
     )
     if ($PSCmdlet.ParameterSetName -eq 'GUID') {
-        $MenuDefinition = $Global:MenuDefinitions.$menuGUID
+        $MenuDefinition = $Script:MenuDefinitions.$menuGUID
     }#if
     if($menudefinition.Initialization) {
         $initialize = [scriptblock]::Create($menudefinition.Initialization)
@@ -237,32 +237,32 @@ function Invoke-Menu {
     $scriptblock = [scriptblock]::Create($(New-MenuScriptBlock -menudefinition $menudefinition))
     &$scriptblock
 }#function Invoke-Menu
-function Add-GlobalMenuDefinition {
+function Add-MenuDefinition {
     param(
         $MenuDefinition
     )
-    #create the Global Menu Definitions Hashtable if needed
-    if (Test-Path variable:Global:MenuDefinitions) {}
-    else {$Global:MenuDefinitions = @{}}
+    #create the Module Menu Definitions Hashtable if needed
+    if (Test-Path variable:Script:MenuDefinitions) {}
+    else {$Script:MenuDefinitions = @{}}
     #add the new menu definition to the hashtable
-    $Global:MenuDefinitions.$($MenuDefinition.GUID)=$MenuDefinition
+    $Script:MenuDefinitions.$($MenuDefinition.GUID)=$MenuDefinition
     if ($MenuDefinition.ParentGUID) {Update-MenuChildLookup}
 }
 function Update-MenuChildLookup {
-    $Global:MenuChildLookup = @{}
-    $global:MenuDefinitions.Values | Where-Object {$_.ParentGUID -ne $null} | foreach {$Global:MenuChildLookup.$($_.ParentGUID) += @($_.GUID)}
-}#Function Add-GlobalMenuDefinition
+    $Script:MenuChildLookup = @{}
+    $Script:MenuDefinitions.Values | Where-Object {$_.ParentGUID -ne $null} | foreach {$Script:MenuChildLookup.$($_.ParentGUID) += @($_.GUID)}
+}#Function Add-ScriptMenuDefinition
 function Get-ChildMenu {
     param(
         $GUID
     )    
-    $ChildMenuGUIDs = @($Global:MenuChildLookup.$GUID | Sort-Object)
+    $ChildMenuGUIDs = @($Script:MenuChildLookup.$GUID | Sort-Object)
     if ($ChildMenuGUIDs.count -ge 1) {
         $childMenus = @()
         foreach ($GUID in $ChildMenuGUIDs) {
             $childmenu = @{
                 GUID = $GUID
-                Title = $Global:MenuDefinitions.$GUID.Title
+                Title = $Script:MenuDefinitions.$GUID.Title
             }#childmenu
             $childMenus += $childmenu
         }#foreach
@@ -304,7 +304,7 @@ function New-DynamicMenuDefinition {
         [string]$Initialization
     )
     if ($parentGUID) {}
-    else {$ParentGUID = $Global:MenuDefinitions | Where-Object Title -eq $ParentMenu | Select-Object -ExpandProperty GUID}
+    else {$ParentGUID = $Script:MenuDefinitions | Where-Object Title -eq $ParentMenu | Select-Object -ExpandProperty GUID}
     
     $menudefinition = [pscustomobject]@{
         GUID = [guid]::NewGuid().Guid
