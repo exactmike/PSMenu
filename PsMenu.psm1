@@ -72,19 +72,28 @@ function Get-MenuHierarchy {
         .OUTPUTS
         String showing a representation of the menu hierarchy
     #>
+    [cmdletbinding()]
     param(
+        [parameter(Mandatory = $true)]
         $GUID
         ,
         $MenuDefinitions = $Script:MenuDefinitions
     )
-    $menuHierarchy = $MenuDefinitions.$GUID.Title
-    $ParentGUID = $MenuDefinitions.$GUID.ParentGUID
-    while ($ParentGUID){
-        $menuHierarchy = $($MenuDefinitions.$parentGUID.Title) + ' -> '  + $menuHierarchy
-        $ParentGUID = $MenuDefinitions.$ParentGUID.ParentGUID    
-    }#do
-        $menuHierarchy
-}
+    if (Test-Path -Path variable:Script:MenuDefinitions)
+    {
+        $menuHierarchy = $MenuDefinitions.$GUID.Title
+        $ParentGUID = $MenuDefinitions.$GUID.ParentGUID
+        while ($ParentGUID){
+            $menuHierarchy = $($MenuDefinitions.$parentGUID.Title) + ' -> '  + $menuHierarchy
+            $ParentGUID = $MenuDefinitions.$ParentGUID.ParentGUID    
+        }#do
+            $menuHierarchy
+    }#if
+    else
+    {
+        Throw 'No Menu Definitions Exist'
+    }
+}#function
 function Show-Menu {
     <#
         .Synopsis
@@ -100,6 +109,7 @@ function Show-Menu {
         .OUTPUTS
         Read-Host with custom Prompt
     #>
+    [cmdletbinding()]
     param(
         $MenuDefinition
     )
@@ -160,6 +170,7 @@ function New-MenuScriptBlock {
         .OUTPUTS
         A string, specifially a here-string, for conversion by Invoke-Menu to a scriptblock object.  
     #>
+    [cmdletbinding()]
     param(
         $MenuDefinition
     )
@@ -220,6 +231,7 @@ function Invoke-Menu {
         .OUTPUTS
         Invokes a scriptblock which is created based on the MenuDefinition Object
     #>
+    [cmdletbinding()]
     param(
         [parameter(ParameterSetName='Definition')]
         $MenuDefinition
@@ -238,6 +250,7 @@ function Invoke-Menu {
     &$scriptblock
 }#function Invoke-Menu
 function Add-MenuDefinition {
+    [cmdletbinding()]
     param(
         $MenuDefinition
     )
@@ -249,10 +262,12 @@ function Add-MenuDefinition {
     if ($MenuDefinition.ParentGUID) {Update-MenuChildLookup}
 }
 function Update-MenuChildLookup {
+    [cmdletbinding()]
     $Script:MenuChildLookup = @{}
     $Script:MenuDefinitions.Values | Where-Object {$_.ParentGUID -ne $null} | foreach {$Script:MenuChildLookup.$($_.ParentGUID) += @($_.GUID)}
 }#Function Add-ScriptMenuDefinition
 function Get-ChildMenu {
+    [cmdletbinding()]
     param(
         $GUID
     )    
@@ -288,6 +303,7 @@ function New-DynamicMenuDefinition {
         .OUTPUTS
         A MenuDefinition Object
     #>
+    [cmdletbinding()]
     param(
         [string]$Title
         ,
