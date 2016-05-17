@@ -193,7 +193,7 @@ do {
     }
     Start-Sleep -Milliseconds 1000
 }#do
-until (`${Global:$($MenuDefinition.GUID)_exit})
+until (`${Script:$($MenuDefinition.GUID)_exit})
 Remove-Variable -Name $("{$($MenuDefinition.GUID)_exit}") -Scope Script
 Clear-Host
 "@
@@ -214,7 +214,7 @@ function Invoke-Menu {
         Invokes a pre-created MenuDefinition Object.
         .EXAMPLE
         Invoke-Menu -MenuGUID 9e7ff8e1-afbb-418d-a31f-9c07bce3ab33
-        Invokes a pre-created MenuDefinition Object which is stored in the Global:MenuDefinitions Hashtable
+        Invokes a pre-created MenuDefinition Object which is stored in the Script:MenuDefinitions Hashtable
         .INPUTS
         A Menu Definition Object
         .OUTPUTS
