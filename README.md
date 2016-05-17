@@ -27,6 +27,7 @@ Alternatively, try using New-DynamicMenuDefinition, like this: $menudefinition =
 2. Improve the Menu Hierarchy logic and functions
 3. Make screen clearing optional via parameter
 4. Modify New-DynamicMenuDefinition to make command pipeline possible (place choice token/identifier arbitrarily within the command string)
+5. Add Import and Export functions to import and export menu definitions to JSON
 
 ## Note concerning dynamic scriptblocks
 * To be successful, you will need to be aware of the rules variable scoping in relation to script blocks created by these functions.
