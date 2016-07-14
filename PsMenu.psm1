@@ -115,6 +115,8 @@ function Show-Menu {
 param
 (
     $MenuDefinition
+    ,
+    [bool]$ClearHost
 )
 $childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
 $displaychoices = @()
@@ -156,7 +158,13 @@ if ($menudefinition.ParentGUID)
     $menuprompt = $menuprompt + "`nEnter your selection or 'Q' to return to parent menu`n:"
 }#if
 else {$menuprompt = $menuprompt + "`nEnter your selection or 'Q' to exit this menu`n:"}
-Clear-Host
+if ($MenuDefinition.ClearHost -or $ClearHost)
+{
+    if ($ClearHost)
+    {
+        Clear-Host
+    }
+}
 read-host -Prompt $menuprompt
 }#function Show-Menu
 function New-MenuScriptBlock {
@@ -177,6 +185,8 @@ function New-MenuScriptBlock {
     [cmdletbinding()]
     param(
         $MenuDefinition
+        ,
+        [bool]$ClearHost
     )
     $num = 0
     $childmenus = @(Get-ChildMenu -GUID $menudefinition.GUID)
@@ -184,7 +194,7 @@ function New-MenuScriptBlock {
         if ($menudefinition.choices.count -ge 1){
             foreach ($choice in $menudefinition.choices) {
                 $num++
-                "$num {$($choice.command)$(if ($choice.Exit){"`nSet-Variable -name $($menudefinition.GUID)_Exit -Value `$true -Scope Script"})}"
+                "$num {$($choice.command)$(if ($choice.Exit){"`nSet-Variable -name Menu_exit -Value `$true -Scope Local"})}"
             }#foreach
         }#if
         if ($childmenus.count -ge 1) {
@@ -196,25 +206,26 @@ function New-MenuScriptBlock {
     )#switchchoices
     $switchchoicesstring = $switchchoices -join "`n`t`t"
     $commandstring = @"
-`${Script:$($MenuDefinition.GUID)_exit} = `$false
+Set-Variable -Name Menu_exit -Scope Local -Value `$false
 do {
-    `$selection = Show-Menu -MenuDefinition `$menudefinition
+    `$selection = Show-Menu -MenuDefinition `$menudefinition -ClearHost `$ClearHost
     switch (`$Selection) {
         $($switchchoicesstring)
-        'Q'{`${Script:$($MenuDefinition.GUID)_exit} = `$true}
+        'Q'{Set-Variable -Name Menu_exit -Scope Local -Value `$true}
         Default {
             Write-Host 'Invalid entry.  Please make another selection.'
         }
     }
     Start-Sleep -Milliseconds 1000
 }#do
-until (`${Script:$($MenuDefinition.GUID)_exit})
-Remove-Variable -Name $("{$($MenuDefinition.GUID)_exit}") -Scope Script
-Clear-Host
+until (`$Local:Menu_exit)
 "@
-
-    $commandstring
-    
+    if ($menudefinition.ClearHost -or $ClearHost)
+    {
+        if ($ClearHost)
+        {$commandstring += "`nClear-Host"}
+    }
+    $commandstring 
 }#Function New-MenuScriptBlock
 function Invoke-Menu {
 <#
@@ -243,6 +254,8 @@ param
     ,
     [parameter(ParameterSetName='GUID')]
     $MenuGUID
+    ,
+    [bool]$ClearHost = $true
 )
 if ($PSCmdlet.ParameterSetName -eq 'GUID') {
     $MenuDefinition = $Script:MenuDefinitions.$menuGUID
@@ -251,7 +264,7 @@ if($menudefinition.Initialization) {
     $initialize = [scriptblock]::Create($menudefinition.Initialization)
     &$initialize
 }#if
-$scriptblock = [scriptblock]::Create($(New-MenuScriptBlock -menudefinition $menudefinition))
+$scriptblock = [scriptblock]::Create($(New-MenuScriptBlock -menudefinition $menudefinition -ClearHost $ClearHost))
 &$scriptblock
 }#function Invoke-Menu
 function Add-MenuDefinition {
@@ -347,4 +360,55 @@ $menudefinition = [pscustomobject]@{
     ParentGUID = $ParentGUID
 }#$menudefinition
 $menudefinition
+}
+function Read-DynamicMenu {
+<#
+    .Synopsis
+    Creates a MenuDefinition Object dynamically for an array of string objects.  
+    .DESCRIPTION
+    Creates a MenuDefinition Object dynamically for an array of string objects.  
+    .EXAMPLE
+    $menudefinition = New-DynamicMenuDefinition -Title "Show properties of the selected file" -Choices (ls | select-object -expandproperty fullname) -command "Get-Item" -ChoiceAsCommandParameter 
+    $menudefinition
+    GUID           : 23348d70-2a4d-49b2-b9f3-40e6c8999c6e
+    Title          : Show properties of the selected file
+    Initialization : 
+    Choices        : {@{choice=C:\test\document1.txt; command=Get-Item C:\test\document1.txt}, @{choice=C:\test\document3.txt; command=Get-Item C:\test\document3.txt}}
+    ParentGUID     : 
+    .INPUTS
+    An array of strings to define the choices displayed.  A command to run.
+    .OUTPUTS
+    A MenuDefinition Object
+#>
+[cmdletbinding()]
+param
+(
+    [string]$Title
+    ,
+    [string[]]$Choices
+    ,
+    [string]$ParentMenu = $null
+    ,
+    $ParentGUID
+    ,
+    [string]$Initialization
+    ,
+    [bool]$ClearHost = $true
+)
+if ($parentGUID) {}
+else {$ParentGUID = $Script:MenuDefinitions | Where-Object Title -eq $ParentMenu | Select-Object -ExpandProperty GUID}
+$menudefinition = [pscustomobject]@{
+    GUID = [guid]::NewGuid().Guid
+    Title = $Title
+    Initialization = $Initialization
+    ClearHost = $ClearHost
+    Choices = @(
+        foreach ($choice in $choices)
+        {
+            [pscustomobject]@{choice="$choice";command="Write-Output $choice";exit=$true}
+        }
+    )
+    ParentGUID = $ParentGUID
+}#$menudefinition
+Invoke-Menu -MenuDefinition $menudefinition -ClearHost $ClearHost
 }
